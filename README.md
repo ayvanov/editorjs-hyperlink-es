@@ -1,6 +1,6 @@
 ![](https://badgen.net/badge/Editor.js/v2.0/blue)
 
-# Hyperlink Tool
+# Hyperlink Tool (Fork of https://github.com/trinhtam/editorjs-hyperlink)
 
 A tool link with target & rel attribute for [Editor.js](https://editorjs.io).  
 
@@ -26,7 +26,8 @@ yarn add editorjs-hyperlink -D
 Include module at your application
 
 ```javascript
-const Hyperlink = require('editorjs-hyperlink');
+import Hyperlink from 'editorjs-hyperlink-es';
+import 'editorjs-hyperlink-es/hyperlink.css';
 ```
 
 ## Usage
