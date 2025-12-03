@@ -1,0 +1,318 @@
+class r {
+  constructor() {
+    this.selection = null, this.savedSelectionRange = null, this.isFakeBackgroundEnabled = !1, this.commandBackground = "backColor", this.commandRemoveFormat = "removeFormat";
+  }
+  isElement(e) {
+    return e && typeof e == "object" && e.nodeType && e.nodeType === Node.ELEMENT_NODE;
+  }
+  isContentEditable(e) {
+    return e.contentEditable === "true";
+  }
+  isNativeInput(e) {
+    const t = [
+      "INPUT",
+      "TEXTAREA"
+    ];
+    return e && e.tagName ? t.includes(e.tagName) : !1;
+  }
+  canSetCaret(e) {
+    let t = !0;
+    if (this.isNativeInput(e))
+      switch (e.type) {
+        case "file":
+        case "checkbox":
+        case "radio":
+        case "hidden":
+        case "submit":
+        case "button":
+        case "image":
+        case "reset":
+          t = !1;
+          break;
+      }
+    else
+      t = this.isContentEditable(e);
+    return t;
+  }
+  CSS() {
+    return {
+      editorWrapper: "codex-editor",
+      editorZone: "codex-editor__redactor"
+    };
+  }
+  anchorNode() {
+    const e = window.getSelection();
+    return e ? e.anchorNode : null;
+  }
+  anchorElement() {
+    const e = window.getSelection();
+    if (!e)
+      return null;
+    const t = e.anchorNode;
+    return t ? this.isElement(t) ? t : t.parentElement : null;
+  }
+  anchorOffset() {
+    const e = window.getSelection();
+    return e ? e.anchorOffset : null;
+  }
+  isCollapsed() {
+    const e = window.getSelection();
+    return e ? e.isCollapsed : null;
+  }
+  isAtEditor() {
+    const e = r.get();
+    let t = e.anchorNode || e.focusNode;
+    t && t.nodeType === Node.TEXT_NODE && (t = t.parentNode);
+    let n = null;
+    return t && (n = t.closest(`.${r.CSS.editorZone}`)), n && n.nodeType === Node.ELEMENT_NODE;
+  }
+  isSelectionExists() {
+    return !!r.get().anchorNode;
+  }
+  static get range() {
+    const e = window.getSelection();
+    return e && e.rangeCount ? e.getRangeAt(0) : null;
+  }
+  static get rect() {
+    let e = document.selection, t, n = {
+      x: 0,
+      y: 0,
+      width: 0,
+      height: 0
+    };
+    if (e && e.type !== "Control")
+      return t = e.createRange(), n.x = t.boundingLeft, n.y = t.boundingTop, n.width = t.boundingWidth, n.height = t.boundingHeight, n;
+    if (!window.getSelection || (e = window.getSelection(), e.rangeCount === null || isNaN(e.rangeCount)) || e.rangeCount === 0)
+      return n;
+    if (t = e.getRangeAt(0).cloneRange(), t.getBoundingClientRect && (n = t.getBoundingClientRect()), n.x === 0 && n.y === 0) {
+      const i = document.createElement("span");
+      if (i.getBoundingClientRect) {
+        i.appendChild(document.createTextNode("​")), t.insertNode(i), n = i.getBoundingClientRect();
+        const s = i.parentNode;
+        s.removeChild(i), s.normalize();
+      }
+    }
+    return n;
+  }
+  static get text() {
+    return window.getSelection ? window.getSelection().toString() : "";
+  }
+  get() {
+    return window.getSelection();
+  }
+  setCursor(e, t = 0) {
+    const n = document.createRange(), i = window.getSelection();
+    return this.isNativeInput(e) ? this.canSetCaret(e) ? (e.focus(), e.selectionStart = e.selectionEnd = t, e.getBoundingClientRect()) : void 0 : (n.setStart(e, t), n.setEnd(e, t), i.removeAllRanges(), i.addRange(n), n.getBoundingClientRect());
+  }
+  removeFakeBackground() {
+    this.isFakeBackgroundEnabled && (this.isFakeBackgroundEnabled = !1, document.execCommand(this.commandRemoveFormat));
+  }
+  setFakeBackground() {
+    document.execCommand(this.commandBackground, !1, "#a8d6ff"), this.isFakeBackgroundEnabled = !0;
+  }
+  save() {
+    this.savedSelectionRange = r.range;
+  }
+  restore() {
+    if (!this.savedSelectionRange)
+      return;
+    const e = window.getSelection();
+    e.removeAllRanges(), e.addRange(this.savedSelectionRange);
+  }
+  clearSaved() {
+    this.savedSelectionRange = null;
+  }
+  collapseToEnd() {
+    const e = window.getSelection(), t = document.createRange();
+    t.selectNodeContents(e.focusNode), t.collapse(!1), e.removeAllRanges(), e.addRange(t);
+  }
+  findParentTag(e, t = null, n = 10) {
+    const i = window.getSelection();
+    let s = null;
+    return !i || !i.anchorNode || !i.focusNode ? null : ([
+      i.anchorNode,
+      i.focusNode
+    ].forEach((o) => {
+      let l = n;
+      for (; l > 0 && o.parentNode && !(o.tagName === e && (s = o, t && o.classList && !o.classList.contains(t) && (s = null), s)); )
+        o = o.parentNode, l--;
+    }), s);
+  }
+  expandToTag(e) {
+    const t = window.getSelection();
+    t.removeAllRanges();
+    const n = document.createRange();
+    n.selectNodeContents(e), t.addRange(n);
+  }
+}
+class d {
+  constructor({ data: e, config: t, api: n, readOnly: i }) {
+    this.toolbar = n.toolbar, this.inlineToolbar = n.inlineToolbar, this.tooltip = n.tooltip, this.i18n = n.i18n, this.config = t, this.selection = new r(), this.commandLink = "createLink", this.commandUnlink = "unlink", this.CSS = {
+      wrapper: "ce-inline-tool-hyperlink-wrapper",
+      wrapperShowed: "ce-inline-tool-hyperlink-wrapper--showed",
+      button: "ce-inline-tool",
+      buttonActive: "ce-inline-tool--active",
+      buttonModifier: "ce-inline-tool--link",
+      buttonUnlink: "ce-inline-tool--unlink",
+      input: "ce-inline-tool-hyperlink--input",
+      selectTarget: "ce-inline-tool-hyperlink--select-target",
+      selectRel: "ce-inline-tool-hyperlink--select-rel",
+      buttonSave: "ce-inline-tool-hyperlink--button"
+    }, this.targetAttributes = this.config.availableTargets || [
+      "_blank",
+      // Opens the linked document in a new window or tab
+      "_self",
+      // Opens the linked document in the same frame as it was clicked (this is default)
+      "_parent",
+      // Opens the linked document in the parent frame
+      "_top"
+      // Opens the linked document in the full body of the window
+    ], this.relAttributes = this.config.availableRels || [
+      "alternate",
+      //Provides a link to an alternate representation of the document (i.e. print page, translated or mirror)
+      "author",
+      //Provides a link to the author of the document
+      "bookmark",
+      //Permanent URL used for bookmarking
+      "external",
+      //Indicates that the referenced document is not part of the same site as the current document
+      "help",
+      //Provides a link to a help document
+      "license",
+      //Provides a link to licensing information for the document
+      "next",
+      //Provides a link to the next document in the series
+      "nofollow",
+      //Links to an unendorsed document, like a paid link. ("nofollow" is used by Google, to specify that the Google search spider should not follow that link)
+      "noreferrer",
+      //Requires that the browser should not send an HTTP referer header if the user follows the hyperlink
+      "noopener",
+      //Requires that any browsing context created by following the hyperlink must not have an opener browsing context
+      "prev",
+      //The previous document in a selection
+      "search",
+      //Links to a search tool for the document
+      "tag"
+      //A tag (keyword) for the current document
+    ], this.nodes = {
+      button: null,
+      wrapper: null,
+      input: null,
+      selectTarget: null,
+      selectRel: null,
+      buttonSave: null
+    }, this.inputOpened = !1;
+  }
+  render() {
+    return this.nodes.button = document.createElement("button"), this.nodes.button.type = "button", this.nodes.button.classList.add(this.CSS.button, this.CSS.buttonModifier), this.nodes.button.appendChild(this.iconSvg("link", 14, 10)), this.nodes.button.appendChild(this.iconSvg("unlink", 15, 11)), this.nodes.button;
+  }
+  renderActions() {
+    this.nodes.wrapper = document.createElement("div"), this.nodes.wrapper.classList.add(this.CSS.wrapper), this.nodes.input = document.createElement("input"), this.nodes.input.placeholder = "https://...", this.nodes.input.classList.add(this.CSS.input);
+    let e;
+    for (this.nodes.selectTarget = document.createElement("select"), this.nodes.selectTarget.classList.add(this.CSS.selectTarget), this.addOption(this.nodes.selectTarget, this.i18n.t("Select target"), ""), e = 0; e < this.targetAttributes.length; e++)
+      this.addOption(this.nodes.selectTarget, this.targetAttributes[e], this.targetAttributes[e]);
+    for (this.config.target && (this.targetAttributes.length === 0 && this.addOption(this.nodes.selectTarget, this.config.target, this.config.target), this.nodes.selectTarget.value = this.config.target), this.nodes.selectRel = document.createElement("select"), this.nodes.selectRel.classList.add(this.CSS.selectRel), this.addOption(this.nodes.selectRel, this.i18n.t("Select rel"), ""), e = 0; e < this.relAttributes.length; e++)
+      this.addOption(this.nodes.selectRel, this.relAttributes[e], this.relAttributes[e]);
+    return this.config.rel && (this.relAttributes.length === 0 && this.addOption(this.nodes.selectTarget, this.config.rel, this.config.rel), this.nodes.selectRel.value = this.config.rel), this.nodes.buttonSave = document.createElement("button"), this.nodes.buttonSave.type = "button", this.nodes.buttonSave.classList.add(this.CSS.buttonSave), this.nodes.buttonSave.innerHTML = this.i18n.t("Save"), this.nodes.buttonSave.addEventListener("click", (t) => {
+      this.savePressed(t);
+    }), this.nodes.wrapper.appendChild(this.nodes.input), this.targetAttributes && this.targetAttributes.length > 0 && this.nodes.wrapper.appendChild(this.nodes.selectTarget), this.relAttributes && this.relAttributes.length > 0 && this.nodes.wrapper.appendChild(this.nodes.selectRel), this.nodes.wrapper.appendChild(this.nodes.buttonSave), this.nodes.wrapper;
+  }
+  surround(e) {
+    if (e) {
+      this.inputOpened ? (this.selection.restore(), this.selection.removeFakeBackground()) : (this.selection.setFakeBackground(), this.selection.save());
+      const t = this.selection.findParentTag("A");
+      if (t) {
+        this.selection.expandToTag(t), this.unlink(), this.closeActions(), this.checkState(), this.toolbar.close();
+        return;
+      }
+    }
+    this.toggleActions();
+  }
+  get shortcut() {
+    return this.config.shortcut || "CMD+L";
+  }
+  get title() {
+    return "Hyperlink";
+  }
+  static get isInline() {
+    return !0;
+  }
+  static get sanitize() {
+    return {
+      a: {
+        href: !0,
+        target: !0,
+        rel: !0
+      }
+    };
+  }
+  checkState(e = null) {
+    const t = this.selection.findParentTag("A");
+    if (t) {
+      this.nodes.button.classList.add(this.CSS.buttonUnlink), this.nodes.button.classList.add(this.CSS.buttonActive), this.openActions();
+      const n = t.getAttribute("href"), i = t.getAttribute("target"), s = t.getAttribute("rel");
+      this.nodes.input.value = n || "", this.nodes.selectTarget.value = i || "", this.nodes.selectRel.value = s || "", this.selection.save();
+    } else
+      this.nodes.button.classList.remove(this.CSS.buttonUnlink), this.nodes.button.classList.remove(this.CSS.buttonActive);
+    return !!t;
+  }
+  clear() {
+    this.closeActions();
+  }
+  toggleActions() {
+    this.inputOpened ? this.closeActions(!1) : this.openActions(!0);
+  }
+  openActions(e = !1) {
+    this.nodes.wrapper.classList.add(this.CSS.wrapperShowed), e && this.nodes.input.focus(), this.inputOpened = !0;
+  }
+  closeActions(e = !0) {
+    if (this.selection.isFakeBackgroundEnabled) {
+      const t = new r();
+      t.save(), this.selection.restore(), this.selection.removeFakeBackground(), t.restore();
+    }
+    this.nodes.wrapper.classList.remove(this.CSS.wrapperShowed), this.nodes.input.value = "", this.nodes.selectTarget.value = "", this.nodes.selectRel.value = "", e && this.selection.clearSaved(), this.inputOpened = !1;
+  }
+  savePressed(e) {
+    e.preventDefault(), e.stopPropagation(), e.stopImmediatePropagation();
+    let t = this.nodes.input.value || "", n = this.nodes.selectTarget.value || "", i = this.nodes.selectRel.value || "";
+    if (t.trim() || (this.selection.restore(), this.unlink(), e.preventDefault(), this.closeActions()), this.config.validate && this.config.validate && !this.validateURL(t)) {
+      this.tooltip.show(this.nodes.input, "The URL is not valid.", {
+        placement: "top"
+      }), setTimeout(() => {
+        this.tooltip.hide();
+      }, 1e3);
+      return;
+    }
+    t = this.prepareLink(t), this.selection.restore(), this.selection.removeFakeBackground(), this.insertLink(t, n, i), this.selection.collapseToEnd(), this.inlineToolbar.close();
+  }
+  validateURL(e) {
+    return !!new RegExp("^(https?:\\/\\/)?((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|((\\d{1,3}\\.){3}\\d{1,3}))(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*(\\?[;&a-z\\d%_.~+=-]*)?(\\#[-a-z\\d_]*)?$", "i").test(e);
+  }
+  prepareLink(e) {
+    return e = e.trim(), e = this.addProtocol(e), e;
+  }
+  addProtocol(e) {
+    if (/^(\w+):(\/\/)?/.test(e))
+      return e;
+    const t = /^\/[^/\s]?/.test(e), n = e.substring(0, 1) === "#", i = /^\/\/[^/\s]/.test(e);
+    return !t && !n && !i && (e = "http://" + e), e;
+  }
+  insertLink(e, t = "", n = "") {
+    let i = this.selection.findParentTag("A");
+    i ? this.selection.expandToTag(i) : (document.execCommand(this.commandLink, !1, e), i = this.selection.findParentTag("A")), i && (t ? i.target = t : i.removeAttribute("target"), n ? i.rel = n : i.removeAttribute("rel"));
+  }
+  unlink() {
+    document.execCommand(this.commandUnlink);
+  }
+  iconSvg(e, t = 14, n = 14) {
+    const i = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    return i.classList.add("icon", "icon--" + e), i.setAttribute("width", t + "px"), i.setAttribute("height", n + "px"), i.innerHTML = `<use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#${e}"></use>`, i;
+  }
+  addOption(e, t, n = null) {
+    let i = document.createElement("option");
+    i.text = t, i.value = n, e.add(i);
+  }
+}
+export {
+  d as default
+};
